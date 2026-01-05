@@ -2,7 +2,7 @@
 
 namespace GestionDeInventario.Models;
 
-public class Entrada
+public class Entradas
 {
     [Key]
     public int EntradaId { get; set; }

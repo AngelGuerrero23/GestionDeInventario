@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace GestionDeInventario.Models;
 
-public class EntradaDetalle
+public class EntradaDetalles
 {
     [Key]
     public int Id { get; set; }
@@ -12,11 +12,5 @@ public class EntradaDetalle
     public int ProductoId { get; set; }
     public int Cantidad { get; set; }
     public double Costo { get; set; }
-
-    [ForeignKey("ProductoId")]
-    public virtual ICollection<Producto> Productos { get; set; }
-
-    [ForeignKey("EntradaId")]
-    public virtual ICollection<Entrada> Entradas { get; set; }
 
 }

@@ -1,8 +1,9 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace GestionDeInventario.Models;
 
-public class Producto
+public class Productos
 {
     [Key]
     public int ProductoId { get; set; }
@@ -16,4 +17,8 @@ public class Producto
     public decimal Precio { get; set; }
     [Range(0, int.MaxValue, ErrorMessage = "La existencia no puede ser negativa.")]
     public int Existencia { get; set; }
+
+    [ForeignKey("ProductoId")]
+    public virtual ICollection<EntradaDetalles> EntradaDetalles { get; set; }
 }
+
