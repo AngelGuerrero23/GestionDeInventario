@@ -1,0 +1,150 @@
+﻿@attribute [Authorize]
+
+@page "/producto/upsert"
+@page "/producto/upsert/{ProductoId:int}"
+
+
+@inject ProductoService productoService
+@inject NavigationManager navigationManager
+@rendermode InteractiveServer
+
+<PageTitle>@Titulo</PageTitle>
+
+<EditForm Model="Producto" OnValidSubmit="Guardar">
+    <DataAnnotationsValidator />
+
+    <div class="container">
+        <div class="card shadow-lg">
+            @*Header*@
+            <div class="card-header text-center">
+                <h5 class="card-title">@Titulo Producto</h5>
+            </div>
+
+            @*Body*@
+            <div class="card-body">
+                <div class="row">
+                    @* Id (Solo lectura) *@
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label"><strong>Producto Id</strong></label>
+                        <InputNumber @bind-Value="Producto.ProductoId" class="form-control" readonly />
+                    </div>
+
+                    @* Descripción *@
+                    <div class="col-md-9 mb-3">
+                        <label class="form-label"><strong>Descripción</strong></label>
+                        <InputText @bind-Value="Producto.Descripcion" class="form-control" placeholder="Nombre del producto..." />
+                        <ValidationMessage For="@(() => Producto.Descripcion)" />
+                    </div>
+                </div>
+
+                <div class="row">
+                    @* Costo *@
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label"><strong>Costo</strong></label>
+                        <div class="input-group">
+                            <span class="input-group-text">RD$</span>
+                            <InputNumber @bind-Value="Producto.Costo" class="form-control" />
+                        </div>
+                        <ValidationMessage For="@(() => Producto.Costo)" />
+                    </div>
+
+                    @* Precio *@
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label"><strong>Precio de Venta</strong></label>
+                        <div class="input-group">
+                            <span class="input-group-text">RD$</span>
+                            <InputNumber @bind-Value="Producto.Precio" class="form-control" />
+                        </div>
+                        <ValidationMessage For="@(() => Producto.Precio)" />
+                    </div>
+
+                    @* Existencia *@
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label"><strong>Existencia</strong></label>
+                        <InputNumber @bind-Value="Producto.Existencia" class="form-control" readonly/>
+
+                    </div>
+                </div>
+
+                @* Alertas de estado *@
+                @if (!string.IsNullOrEmpty(AlertMessage))
+                {
+                    <div class="alert alert-@AlertType mt-3">
+                        @AlertMessage
+                    </div>
+                }
+            </div>
+
+            @*Footer*@
+            <div class="card-footer text-center">
+                <div class="btn-group">
+                    <button type="button" class="btn btn-outline-secondary" @onclick="Volver">
+                        <i class="bi bi-arrow-left" /> Volver
+                    </button>
+                    <button type="submit" class="btn btn-outline-success">
+                        <i class="bi bi-floppy" /> Guardar
+                    </button>
+                    @if (ProductoId > 0)
+                    {
+                        <button type="button" class="btn btn-outline-danger" @onclick="Eliminar">
+                            <i class="bi bi-trash" /> Eliminar
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</EditForm>
+
+@code {
+    [Parameter] public int ProductoId { get; set; }
+    public Productos Producto { get; set; } = new Productos();
+
+    public string Titulo => ProductoId == 0 ? "Crear Nuevo" : "Editar";
+    public string AlertMessage { get; set; } = "";
+    public string AlertType { get; set; } = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (ProductoId > 0)
+        {
+            var encontrado = await productoService.Buscar(ProductoId);
+            if (encontrado != null)
+                Producto = encontrado;
+        }
+    }
+
+    public async Task Guardar()
+    {
+        var resultado = await productoService.Guardar(Producto);
+
+        if (resultado != null)
+        {
+            AlertMessage = "Producto guardado con éxito.";
+            AlertType = "success";
+            await Task.Delay(1500); 
+            Volver();
+        }
+        else
+        {
+            AlertMessage = "Hubo un error al guardar el producto.";
+            AlertType = "danger";
+        }
+    }
+
+    public async Task Eliminar()
+    {
+        var eliminado = await productoService.Eliminar(Producto.ProductoId);
+        if (eliminado)
+        {
+            Volver();
+        }
+        else
+        {
+            AlertMessage = "No se pudo eliminar el producto (puede tener registros asociados).";
+            AlertType = "danger";
+        }
+    }
+
+    private void Volver() => navigationManager.NavigateTo("/producto/index");
+}

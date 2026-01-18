@@ -1,0 +1,157 @@
+﻿@attribute [Authorize]
+
+@page "/Entrada/Index"
+@using GestionDeInventario.Services
+@using GestionDeInventario.Models
+@inject EntradasService entradasService
+@rendermode InteractiveServer
+
+<PageTitle>Consulta de Entradas</PageTitle>
+
+<div class="container">
+    <div class="card shadow-lg">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title">Consulta de Entradas</h5>
+            <a href="/entrada/upsert/0" class="btn btn-primary">
+                <i class="bi bi-plus-square"></i> Crear
+            </a>
+        </div>
+
+        <div class="card-body">
+            @* Filtros de Fecha *@
+            <div class="row mt-3">
+                <div class="col-3">
+                    <label class="form-label"><strong>Desde</strong></label>
+                    <InputDate class="form-control" @bind-Value="Desde" />
+                </div>
+                <div class="col-3">
+                    <label class="form-label"><strong>Hasta</strong></label>
+                    <InputDate class="form-control" @bind-Value="Hasta" />
+                </div>
+            </div>
+
+            <div class="row mt-3">
+                <div class="col-3">
+                    <label class="form-label"><strong>Filtrar Por</strong></label>
+                    <InputSelect class="form-select" @bind-Value="Filtro">
+                        <option value="" selected disabled>Elija una opción</option>
+                        <option value="Id">ID Entrada</option>
+                        <option value="Concepto">Concepto</option>
+                    </InputSelect>
+                </div>
+
+                <div class="col-4">
+                    <label class="form-label"><strong>Búsqueda</strong></label>
+                    <div class="input-group">
+                        <input class="form-control" @bind-value="ValorFiltro" placeholder="Buscar..." />
+                        <button type="button" class="btn btn-primary bi bi-search" @onclick="Buscar"></button>
+                    </div>
+                </div>
+                <div class="col-3 d-flex align-items-end">
+                    <button type="button" class="btn btn-secondary bi bi-arrow-counterclockwise" @onclick="Restablecer"> Restablecer</button>
+                </div>
+            </div>
+
+            @* Tabla de Entradas *@
+            <table class="table table-hover mt-3">
+                <thead class="table-light">
+                    <tr>
+                        <th>Entrada Id</th>
+                        <th>Fecha</th>
+                        <th>Concepto</th>
+                        <th class="text-end">Monto Total</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (listaEntradas == null)
+                    {
+                        <tr>
+                            <td colspan="5" class="text-center">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Cargando...</span>
+                                </div>
+                                <p>Cargando datos...</p>
+                            </td>
+                        </tr>
+                    }
+                    else if (!listaEntradas.Any())
+                    {
+                        <tr>
+                            <td colspan="5" class="text-center">
+                                <div class="alert alert-info mt-3">
+                                    <i class="bi bi-info-circle"></i> No se encontraron entradas registradas con los filtros seleccionados.
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                    @foreach (var entrada in listaEntradas)
+                    {
+                        <tr>
+                            <td>@entrada.EntradaId</td>
+                            <td>@entrada.Fecha.ToShortDateString()</td>
+                            <td>@entrada.Concepto</td>
+                            <td class="text-end">@entrada.Total.ToString("N2")</td>
+                            <td class="text-center">
+                                <a href="/entrada/upsert/@entrada.EntradaId" class="btn btn-outline-primary bi bi-pencil"></a>
+                            </td>
+                        </tr>
+                    }
+                    }
+                </tbody>
+                
+            </table>
+        </div>
+
+        <div class="card-footer d-flex justify-content-between">
+            <label><strong>Registros: </strong>@listaEntradas.Count</label>
+            <label><strong>Total en Pantalla: </strong>RD$ @listaEntradas.Sum(e => e.Total).ToString("N2")</label>
+        </div>
+    </div>
+</div>
+
+@code {
+    public List<Entradas> listaEntradas { get; set; } = new();
+    public string Filtro { get; set; } = string.Empty;
+    public string ValorFiltro { get; set; } = string.Empty;
+    public DateTime? Desde { get; set; }
+    public DateTime? Hasta { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        listaEntradas = await CargarEntradas();
+    }
+
+    private async Task<List<Entradas>> CargarEntradas()
+    {
+        return await entradasService.ListarEntradas(e => true);
+    }
+
+    public async Task Buscar()
+    {
+        var valorFecha = await entradasService.ListarEntradas(e =>
+            (!Desde.HasValue || e.Fecha >= Desde.Value) &&
+            (!Hasta.HasValue || e.Fecha <= Hasta.Value));
+
+        if (!string.IsNullOrEmpty(Filtro) && !string.IsNullOrEmpty(ValorFiltro))
+        {
+            if (Filtro == "Id" && int.TryParse(ValorFiltro, out int id))
+                valorFecha = valorFecha.Where(e => e.EntradaId == id).ToList();
+            else if (Filtro == "Concepto")
+                valorFecha = valorFecha.Where(e => e.Concepto.Contains(ValorFiltro, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+
+        listaEntradas = valorFecha;
+    }
+
+    public async Task Restablecer()
+    {
+        Filtro = string.Empty;
+        ValorFiltro = string.Empty;
+        Desde = null;
+        Hasta = null;
+        listaEntradas = await CargarEntradas();
+    }
+}

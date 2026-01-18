@@ -1,0 +1,155 @@
+﻿@attribute [Authorize]
+
+@page "/producto/index"
+@using GestionDeInventario.Services
+@using GestionDeInventario.Models
+@inject ProductoService productoService
+@rendermode InteractiveServer
+
+<PageTitle>Catálogo de Productos</PageTitle>
+
+<div class="container">
+    <div class="card shadow-lg">
+        @*Header*@
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title m-0">Catálogo de Productos</h5>
+            <a href="/producto/upsert" class="btn btn-primary">
+                <i class="bi bi-plus-square"></i> Nuevo Producto
+            </a>
+        </div>
+
+        @*Body*@
+        <div class="card-body">
+            @* Filtros de Búsqueda *@
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <label class="form-label"><strong>Filtrar Por:</strong></label>
+                    <InputSelect class="form-select" @bind-Value="Filtro">
+                        <option value="" selected disabled>Elija una opción</option>
+                        <option value="Id">ID Producto</option>
+                        <option value="Descripcion">Descripción</option>
+                    </InputSelect>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label"><strong>Búsqueda:</strong></label>
+                    <div class="input-group">
+                        <input class="form-control" @bind-value="ValorFiltro" placeholder="Escriba para buscar..." />
+                        <button type="button" class="btn btn-primary" @onclick="Buscar">
+                            <i class="bi bi-search"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="button" class="btn btn-secondary w-100" @onclick="Restablecer">
+                        <i class="bi bi-arrow-counterclockwise"></i>
+                    </button>
+                </div>
+            </div>
+
+            @* Tabla de Productos *@
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Descripción</th>
+                        <th class="text-end">Costo</th>
+                        <th class="text-end">Precio</th>
+                        <th class="text-center">Existencia</th>
+                        <th class="text-center">Editar</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (listaProductos == null)
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center py-5">
+                                <div class="spinner-border text-primary" role="status"></div>
+                                <p class="mt-2">Cargando catálogo...</p>
+                            </td>
+                        </tr>
+                    }
+                    else if (listaProductos.Count == 0)
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center py-5">
+                                <div class="alert alert-info d-inline-block">
+                                    <i class="bi bi-box-seam"></i> No se encontraron productos registrados.
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var prod in listaProductos)
+                        {
+                            <tr>
+                                <td>@prod.ProductoId</td>
+                                <td>@prod.Descripcion</td>
+                                <td class="text-end">@prod.Costo.ToString("N2")</td>
+                                <td class="text-end">@prod.Precio.ToString("N2")</td>
+                                <td class="text-center">
+                                    <span class="badge @(prod.Existencia <= 5 ? "bg-danger" : "bg-success")">
+                                        @prod.Existencia
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <a href="/producto/upsert/@prod.ProductoId" class="btn btn-outline-primary btn-sm">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @*Footer*@
+        <div class="card-footer text-muted">
+            <strong>Total de Productos:</strong> @(listaProductos?.Count ?? 0)
+        </div>
+    </div>
+</div>
+
+@code {
+    public List<Productos>? listaProductos { get; set; }
+    public string Filtro { get; set; } = string.Empty;
+    public string ValorFiltro { get; set; } = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarDatos();
+    }
+
+    private async Task CargarDatos()
+    {
+        listaProductos = await productoService.Listar(p => true);
+    }
+
+    public async Task Buscar()
+    {
+        if (string.IsNullOrWhiteSpace(ValorFiltro))
+        {
+            await CargarDatos();
+            return;
+        }
+
+        if (Filtro == "Id" && int.TryParse(ValorFiltro, out int id))
+        {
+            listaProductos = await productoService.Listar(p => p.ProductoId == id);
+        }
+        else if (Filtro == "Descripcion")
+        {
+            listaProductos = await productoService.Listar(p => p.Descripcion.Contains(ValorFiltro));
+        }
+    }
+
+    public async Task Restablecer()
+    {
+        Filtro = string.Empty;
+        ValorFiltro = string.Empty;
+        await CargarDatos();
+    }
+}

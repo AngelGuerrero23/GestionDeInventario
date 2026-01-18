@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace GestionDeInventario.Models;
 
@@ -13,4 +14,6 @@ public class Entradas
     [Range(0.01, int.MaxValue, ErrorMessage ="El Total debe de ser mayor a 0.01")]
     public double Total { get; set; }
 
+    [ForeignKey("EntradaId")]
+    public virtual ICollection<EntradaDetalles> EntradaDetalles { get; set; }
 }

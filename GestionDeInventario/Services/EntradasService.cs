@@ -1,42 +1,45 @@
-﻿using GestionDeInventario.DAL;
+﻿using GestionDeInventario.Data;
 using GestionDeInventario.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
 
 namespace GestionDeInventario.Services;
 
-public class ProductoServices(IDbContextFactory<Contexto> DbFactory)
+public class EntradasService(IDbContextFactory<ApplicationDbContext> DbFactory)
 {
-    public async Task<bool> Guardar(Productos productos)
+    public async Task<bool> Guardar(Entradas entrada)
     {
-        if( !await Existe(productos.ProductoId))
+        if( !await Existe(entrada.EntradaId))
         {
-            return await Insertar(productos);
+            return await Insertar(entrada);
         }
         else
         {
-            return await Modificar(productos);
+            return await Modificar(entrada);
         }
     }
-    private async Task<bool> Insertar(Productos productos)
+    private async Task<bool> Insertar(Entradas entrada)
     {
-        using var contexto = await DbFactory.CreateDbContextAsync();
-        contexto.Producto.Add(productos);
+        await using var contexto = await DbFactory.CreateDbContextAsync();
+        contexto.Entrada.Add(entrada);
+        await AfectarExistencia(entrada.EntradaDetalles.ToArray(), TipoOperacion.Suma);
         return await contexto.SaveChangesAsync() > 0;
-
     }
-    private async Task<bool> Modificar(Productos productos)
+    private async Task<bool> Modificar(Entradas entrada)
     {
         using var contexto = await DbFactory.CreateDbContextAsync();
-        var newDate = await contexto.Producto
+        var newDate = await contexto.Entrada
             .Include(p => p.EntradaDetalles)
             .AsNoTracking()
-            .SingleOrDefaultAsync(p => p.ProductoId == productos.ProductoId);
+            .SingleOrDefaultAsync(p => p.EntradaId == entrada.EntradaId);
         if (newDate == null) { return false; }
 
+        await AfectarExistencia(newDate.EntradaDetalles.ToArray(), TipoOperacion.Resta);
 
-        contexto.Producto.Update(productos);
+        contexto.Entrada.Update(entrada);
+        await AfectarExistencia(entrada.EntradaDetalles.ToArray(), TipoOperacion.Suma);
         return await contexto.SaveChangesAsync() > 0;
+
     }
 
     private async Task AfectarExistencia(EntradaDetalles[] entradaDetalle, TipoOperacion tipoOperacion)
@@ -52,10 +55,10 @@ public class ProductoServices(IDbContextFactory<Contexto> DbFactory)
             await contexto.SaveChangesAsync();
             }
         }
-    private async Task<bool> Existe(int productoId)
+    private async Task<bool> Existe(int entradaId)
     {
         await using var contexto = await DbFactory.CreateDbContextAsync();
-        return await contexto.Producto.AnyAsync(p => p.ProductoId == productoId);
+        return await contexto.Entrada.AnyAsync(p => p.EntradaId == entradaId);
     }
 
     public async Task<List<Productos>>ListarProducto(Expression<Func<Productos, bool>> expression)
@@ -67,32 +70,42 @@ public class ProductoServices(IDbContextFactory<Contexto> DbFactory)
             .ToListAsync();
     }
 
-    public async Task<bool>Eliminar(int productoId)
+    public async Task<List<Entradas>>ListarEntradas(Expression<Func<Entradas, bool>>criterio)
     {
         await using var contexto = await DbFactory.CreateDbContextAsync();
-        var producto = await contexto.Producto
+        return await contexto.Entrada
             .Include(p => p.EntradaDetalles)
-            .FirstOrDefaultAsync(p => p.ProductoId == productoId);
+            .Where(criterio)
+            .AsNoTracking()
+            .ToListAsync();
+    }
 
-        if (producto == null)
+    public async Task<bool>Eliminar(int entradaId)
+    {
+        await using var contexto = await DbFactory.CreateDbContextAsync();
+        var entrada = await contexto.Entrada
+            .Include(p => p.EntradaDetalles)
+            .FirstOrDefaultAsync(p => p.EntradaId == entradaId);
+
+        if (entrada == null)
             return false;
 
-        await AfectarExistencia(producto.EntradaDetalles.ToArray(), TipoOperacion.Resta);
-        contexto.EntradaDetalle.RemoveRange(producto.EntradaDetalles);
-        contexto.Producto.Remove(producto);
+        await AfectarExistencia(entrada.EntradaDetalles.ToArray(), TipoOperacion.Resta);
+        contexto.EntradaDetalle.RemoveRange(entrada.EntradaDetalles);
+        contexto.Entrada.Remove(entrada);
 
         var cantidad = await contexto.SaveChangesAsync();
         return cantidad > 0;
 
     }
 
-    public async Task<Productos>Buscar(int id)
+    public async Task<Entradas?>Buscar(int id)
     {
         await using var contexto = await DbFactory.CreateDbContextAsync();
-        return await contexto.Producto
+        return await contexto.Entrada
             .Include(p => p.EntradaDetalles)
             .AsNoTracking()
-            .FirstOrDefaultAsync(p => p.ProductoId == id);
+            .FirstOrDefaultAsync(p => p.EntradaId == id);
     }
     public enum TipoOperacion
     {

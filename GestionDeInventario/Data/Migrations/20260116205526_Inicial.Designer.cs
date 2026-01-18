@@ -4,6 +4,7 @@ using GestionDeInventario.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GestionDeInventario.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260116205526_Inicial")]
+    partial class Inicial
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -110,7 +113,7 @@ namespace GestionDeInventario.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("EntradaId");
+                    b.HasIndex("ProductoId");
 
                     b.ToTable("EntradaDetalle");
                 });
@@ -320,9 +323,9 @@ namespace GestionDeInventario.Migrations
 
             modelBuilder.Entity("GestionDeInventario.Models.EntradaDetalles", b =>
                 {
-                    b.HasOne("GestionDeInventario.Models.Entradas", null)
+                    b.HasOne("GestionDeInventario.Models.Productos", null)
                         .WithMany("EntradaDetalles")
-                        .HasForeignKey("EntradaId")
+                        .HasForeignKey("ProductoId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
@@ -427,7 +430,7 @@ namespace GestionDeInventario.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("GestionDeInventario.Models.Entradas", b =>
+            modelBuilder.Entity("GestionDeInventario.Models.Productos", b =>
                 {
                     b.Navigation("EntradaDetalles");
                 });
